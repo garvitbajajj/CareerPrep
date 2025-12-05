@@ -4,9 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 
 function Dashboard() {
   const [scores, setScores] = useState([]);
-  const [averages, setAverages] = useState({ 
-    clarity: 0, 
-    coherence: 0, 
+  const [averages, setAverages] = useState({
+    clarity: 0,
+    coherence: 0,
     fillerWords: 0,
     confidence: 0,
     nervousness: 0
@@ -24,13 +24,13 @@ function Dashboard() {
       const totalFillerWords = allScores.reduce((sum, s) => sum + (s.fillerWords || 0), 0);
       const totalConfidence = allScores.reduce((sum, s) => sum + (s.confidence || 0), 0);
       const totalNervousness = allScores.reduce((sum, s) => sum + (s.nervousness || 0), 0);
-      
+
       const avgClarity = parseFloat((totalClarity / allScores.length).toFixed(1));
       const avgCoherence = parseFloat((totalCoherence / allScores.length).toFixed(1));
       const avgFillerWords = parseFloat((totalFillerWords / allScores.length).toFixed(1));
       const avgConfidence = parseFloat((totalConfidence / allScores.length).toFixed(1));
       const avgNervousness = parseFloat((totalNervousness / allScores.length).toFixed(1));
-      
+
       setAverages({
         clarity: avgClarity,
         coherence: avgCoherence,
@@ -40,6 +40,7 @@ function Dashboard() {
       });
 
       // Calculate trends (comparing recent vs older scores)
+      let currentTrends = {};
       if (allScores.length >= 3) {
         const recentCount = Math.min(3, Math.floor(allScores.length / 2));
         const recentScores = allScores.slice(-recentCount);
@@ -57,22 +58,16 @@ function Dashboard() {
           confidence: olderScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / olderScores.length,
         };
 
-        setTrends({
+        currentTrends = {
           clarity: recentAvg.clarity - olderAvg.clarity,
           coherence: recentAvg.coherence - olderAvg.coherence,
           confidence: recentAvg.confidence - olderAvg.confidence,
-        });
+        };
+
+        setTrends(currentTrends);
       }
 
       // Generate intelligent suggestions (will be called after trends are set)
-      const currentTrends = allScores.length >= 3 ? {
-        clarity: (recentScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / recentCount) - 
-                 (olderScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / olderScores.length),
-        coherence: (recentScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / recentCount) - 
-                   (olderScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / olderScores.length),
-        confidence: (recentScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / recentCount) - 
-                   (olderScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / olderScores.length),
-      } : {};
 
       generateSuggestions({
         clarity: avgClarity,
@@ -254,7 +249,7 @@ function Dashboard() {
           Clear All History
         </button>
       </div>
-      
+
       <div className="chart-container">
         <h3>Progress Over Time</h3>
         <p>Your average Clarity is: <strong>{averages.clarity}</strong> / 10</p>
@@ -264,14 +259,14 @@ function Dashboard() {
           Your average filler words per answer: <strong>{averages.fillerWords}</strong>
         </p>
         {/* ----------------------------------------- */}
-        
+
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={scores} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#555" />
             <XAxis dataKey="date" hide />
             <YAxis domain={[0, 10]} stroke="#eee" />
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#242424' }} 
+            <Tooltip
+              contentStyle={{ backgroundColor: '#242424' }}
               labelFormatter={(label) => new Date(label).toLocaleDateString()}
             />
             <Legend />
@@ -289,7 +284,7 @@ function Dashboard() {
           <h3>🎓 Adaptive Learning Suggestions</h3>
           <p className="suggestions-subtitle">Personalized recommendations based on your performance</p>
         </div>
-        
+
         {scores.length === 0 ? (
           <div className="empty-suggestions">
             <div className="empty-icon">📊</div>
