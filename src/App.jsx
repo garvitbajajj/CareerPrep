@@ -8,6 +8,7 @@ import History from './components/History';
 import QuestionBank from './components/QuestionBank';
 import SkillsQuiz from './components/SkillsQuiz';
 import DataManagementPage from './components/DataManagementPage';
+import Chatbot from './components/Chatbot';
 
 function App() {
   const [showHistory, setShowHistory] = useState(false);
@@ -68,6 +69,9 @@ function App() {
           <Dashboard />
         </main>
       )}
+      
+      {/* Chatbot - Always available */}
+      <Chatbot />
     </>
   );
 }

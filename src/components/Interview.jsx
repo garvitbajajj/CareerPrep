@@ -2,19 +2,39 @@
 import React, { useState, useEffect } from "react";
 import Groq from "groq-sdk";
 
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+// Safely initialize Groq client
+let groq;
+try {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (apiKey) {
+    groq = new Groq({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+    });
+  } else {
+    console.warn('VITE_GROQ_API_KEY is not set. Some features may not work.');
+  }
+} catch (error) {
+  console.error('Error initializing Groq client:', error);
+}
 
 // -------- SpeechRecognition Setup --------
 const SpeechRecognition =
   window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
+let recognition = null;
 
-recognition.continuous = true;
-recognition.interimResults = true;
-recognition.lang = "en-US";
+if (SpeechRecognition) {
+  try {
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-US";
+  } catch (error) {
+    console.error('Error initializing SpeechRecognition:', error);
+  }
+} else {
+  console.warn('SpeechRecognition is not supported in this browser.');
+}
 
 const baseSystemPrompt = `You are an expert hiring manager. You will conduct a mock behavioral interview. Start with a simple greeting and the first question. After I answer, evaluate my answer briefly (1-2 sentences) and then ask the next logical follow-up question. Keep the interview going.`;
 
@@ -38,6 +58,8 @@ function Interview() {
 
   // ----- Speech recognition handlers -----
   useEffect(() => {
+    if (!recognition) return;
+
     recognition.onresult = (event) => {
       let transcript = "";
       for (let i = 0; i < event.results.length; i++) {
@@ -162,16 +184,30 @@ function Interview() {
   }, []);
 
   const handleStartListening = () => {
+    if (!recognition) {
+      alert('Speech recognition is not supported in this browser. Please type your answers instead.');
+      return;
+    }
     setCurrentTranscript("");
     setIsListening(true);
-    recognition.start();
-    console.log("Mic on");
+    try {
+      recognition.start();
+      console.log("Mic on");
+    } catch (error) {
+      console.error("Error starting recognition:", error);
+      setIsListening(false);
+    }
   };
 
   const handleStopListening = () => {
+    if (!recognition) return;
     setIsListening(false);
-    recognition.stop();
-    console.log("Mic off");
+    try {
+      recognition.stop();
+      console.log("Mic off");
+    } catch (error) {
+      console.error("Error stopping recognition:", error);
+    }
   };
 
   // ----- Start / End Interview -----
@@ -189,6 +225,9 @@ function Interview() {
     setConversation(initialConversation);
 
     try {
+      if (!groq) {
+        throw new Error('API key not configured. Please set VITE_GROQ_API_KEY environment variable.');
+      }
       const reply = await groq.chat.completions.create({
         messages: initialConversation,
         model: "llama-3.1-8b-instant",
@@ -196,6 +235,7 @@ function Interview() {
       setConversation((prev) => [...prev, reply.choices[0].message]);
     } catch (error) {
       console.error("Error starting interview:", error);
+      alert(`Error starting interview: ${error.message || 'Please check your API key configuration.'}`);
     }
     setIsLoading(false);
   };
@@ -286,6 +326,9 @@ Return ONLY a JSON object in this exact format:
 }`;
 
     try {
+      if (!groq) {
+        throw new Error('API key not configured. Please set VITE_GROQ_API_KEY environment variable.');
+      }
       const reply = await groq.chat.completions.create({
         messages: [...newConversation, { role: "system", content: systemPrompt }],
         model: "llama-3.1-8b-instant",

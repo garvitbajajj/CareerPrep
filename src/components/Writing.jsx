@@ -3,10 +3,21 @@ import React, { useState } from 'react';
 import Groq from 'groq-sdk';
 import ReactMarkdown from 'react-markdown';
 
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+// Safely initialize Groq client
+let groq;
+try {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (apiKey) {
+    groq = new Groq({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+    });
+  } else {
+    console.warn('VITE_GROQ_API_KEY is not set. Some features may not work.');
+  }
+} catch (error) {
+  console.error('Error initializing Groq client:', error);
+}
 
 function Writing() {
   const [inputText, setInputText] = useState('');
@@ -31,6 +42,9 @@ function Writing() {
       After rewriting it, add a section at the bottom starting with "--- \n **Key Improvements:**" followed by a bulleted list of the specific changes you made and why.`;
 
     try {
+      if (!groq) {
+        throw new Error('API key not configured. Please set VITE_GROQ_API_KEY environment variable.');
+      }
       const reply = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },

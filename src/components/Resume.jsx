@@ -4,10 +4,21 @@ import Groq from 'groq-sdk';
 import pdfToText from 'react-pdftotext';
 import ReactMarkdown from 'react-markdown';
 
-const groq = new Groq({
-  apiKey: import.meta.env.VITE_GROQ_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+// Safely initialize Groq client
+let groq;
+try {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (apiKey) {
+    groq = new Groq({
+      apiKey: apiKey,
+      dangerouslyAllowBrowser: true,
+    });
+  } else {
+    console.warn('VITE_GROQ_API_KEY is not set. Some features may not work.');
+  }
+} catch (error) {
+  console.error('Error initializing Groq client:', error);
+}
 
 function Resume() {
   const [jobTitle, setJobTitle] = useState('');
@@ -98,6 +109,9 @@ function Resume() {
     }
 
     try {
+      if (!groq) {
+        throw new Error('API key not configured. Please set VITE_GROQ_API_KEY environment variable.');
+      }
       const reply = await groq.chat.completions.create({
         messages: [{ role: 'user', content: prompt }],
         model: 'llama-3.1-8b-instant',

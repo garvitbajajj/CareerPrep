@@ -58,6 +58,9 @@ function SkillsQuiz() {
       - Explanations are clear and educational`;
 
     try {
+      if (!groq) {
+        throw new Error('API key not configured. Please set VITE_GROQ_API_KEY environment variable.');
+      }
       const reply = await groq.chat.completions.create({
         messages: [
           { role: 'system', content: systemPrompt },
