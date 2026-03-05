@@ -56,7 +56,7 @@ passport.use(
         {
             clientID: process.env.GOOGLE_CLIENT_ID,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-            callbackURL: process.env.CALLBACK_URL || '/auth/google/callback',
+            callbackURL: process.env.CALLBACK_URL || '/api/auth/google/callback',
         },
         async (accessToken, refreshToken, profile, done) => {
             try {
@@ -98,13 +98,15 @@ passport.deserializeUser(async (id, done) => {
 });
 
 // --------------- Routes ---------------
-app.use('/auth', authRoutes);
-app.use('/api', apiRoutes);
+// All routes under /api/ for Vercel serverless compatibility
 
-// Health check
-app.get('/health', (req, res) => {
+// Health check (before auth-protected routes)
+app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
+
+app.use('/api/auth', authRoutes);
+app.use('/api', apiRoutes);
 
 // --------------- MongoDB Connection (cached for serverless) ---------------
 let isConnected = false;

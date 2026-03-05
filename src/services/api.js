@@ -3,7 +3,7 @@
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
 const API_BASE = `${BACKEND_URL}/api`;
-const AUTH_BASE = `${BACKEND_URL}/auth`;
+const AUTH_BASE = `${BACKEND_URL}/api/auth`;
 
 // ----- Auth -----
 
