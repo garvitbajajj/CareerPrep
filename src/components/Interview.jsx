@@ -1,6 +1,7 @@
 // src/components/Interview.jsx
 import React, { useState, useEffect } from "react";
 import Groq from "groq-sdk";
+import { saveChat, saveScore } from '../services/api';
 
 // Safely initialize Groq client
 let groq;
@@ -125,13 +126,13 @@ function Interview() {
 
     // Get the last message in the conversation
     const lastMessage = conversation[conversation.length - 1];
-    
+
     // Only speak assistant (interviewer) messages
     if (lastMessage && lastMessage.role === "assistant" && lastMessage.content) {
       // Small delay to ensure message is rendered
       const timer = setTimeout(() => {
         if (!textToSpeechEnabled) return;
-        
+
         // Stop any ongoing speech
         window.speechSynthesis.cancel();
 
@@ -254,9 +255,7 @@ function Interview() {
     console.log("Interview ended by user.");
 
     if (conversation.length > 1) {
-      const allChats = JSON.parse(localStorage.getItem("interviewChats")) || [];
-      allChats.push(conversation);
-      localStorage.setItem("interviewChats", JSON.stringify(allChats));
+      saveChat(conversation).catch((err) => console.error('Error saving chat:', err));
     }
 
     window.dispatchEvent(new CustomEvent("interviewEnded"));
@@ -284,13 +283,11 @@ function Interview() {
     const newConversation = [...conversation, userMessage];
     setConversation(newConversation);
 
-    // Save scores for dashboard
-    const saveScoreToLocalStorage = (scores) => {
-      const allScores =
-        JSON.parse(localStorage.getItem("interviewScores")) || [];
-      allScores.push({ ...scores, date: new Date().toISOString() });
-      localStorage.setItem("interviewScores", JSON.stringify(allScores));
-      window.dispatchEvent(new CustomEvent("interviewEnded"));
+    // Save scores to backend
+    const saveScoreToBackend = (scores) => {
+      saveScore({ ...scores, date: new Date().toISOString() })
+        .then(() => window.dispatchEvent(new CustomEvent("interviewEnded")))
+        .catch((err) => console.error('Error saving score:', err));
     };
 
     // System prompt asking Groq to act as VOICE / DELIVERY ANALYZER
@@ -372,7 +369,7 @@ Return ONLY a JSON object in this exact format:
         setLastAnalysis(analysis);
 
         // Save key metrics to history (dashboard)
-        saveScoreToLocalStorage({
+        saveScoreToBackend({
           clarity: analysis.clarity,
           coherence: analysis.coherence,
           fillerWords: analysis.fillerWords,
@@ -542,7 +539,7 @@ Return ONLY a JSON object in this exact format:
               {/* Enhanced Speech Analysis Section */}
               <div className="enhanced-analysis-section">
                 <h4>📊 Detailed Speech Analysis</h4>
-                
+
                 <div className="analysis-scores-grid">
                   <div className="analysis-score-card">
                     <div className="score-header">

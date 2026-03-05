@@ -1,0 +1,84 @@
+# Google OAuth + MongoDB Integration — Walkthrough
+
+## Summary
+
+Added **Google OAuth authentication** and **MongoDB data persistence** to the CareerPrep app, replacing all `localStorage` usage with backend API calls.
+
+## Architecture
+
+```mermaid
+graph LR
+  A[React Frontend<br>:5173] -->|/auth/*<br>/api/*| B[Express Backend<br>:5000]
+  B --> C[MongoDB]
+  B --> D[Google OAuth 2.0]
+```
+
+Vite proxies `/auth` and `/api` requests to the Express backend during development.
+
+## Files Changed
+
+### New Files (Backend — `server/`)
+| File | Purpose |
+|------|---------|
+| [package.json](file:///c:/NU/career-sim-ai(final)/server/package.json) | Backend dependencies |
+| [.env](file:///c:/NU/career-sim-ai(final)/server/.env) | Config template (fill in your credentials) |
+| [index.js](file:///c:/NU/career-sim-ai(final)/server/index.js) | Express server with Passport + session config |
+| [models/User.js](file:///c:/NU/career-sim-ai(final)/server/models/User.js) | Mongoose User schema (Google profile + interview data) |
+| [routes/auth.js](file:///c:/NU/career-sim-ai(final)/server/routes/auth.js) | Google OAuth login/logout/current-user routes |
+| [routes/api.js](file:///c:/NU/career-sim-ai(final)/server/routes/api.js) | Interview data CRUD (chats + scores) |
+
+### New Files (Frontend)
+| File | Purpose |
+|------|---------|
+| [src/services/api.js](file:///c:/NU/career-sim-ai(final)/src/services/api.js) | API helper functions for all backend calls |
+| [src/context/AuthContext.jsx](file:///c:/NU/career-sim-ai(final)/src/context/AuthContext.jsx) | React Context providing user auth state |
+| [src/components/LoginPage.jsx](file:///c:/NU/career-sim-ai(final)/src/components/LoginPage.jsx) | Login page with Google sign-in button |
+
+### Modified Files
+| File | Change |
+|------|--------|
+| [vite.config.js](file:///c:/NU/career-sim-ai(final)/vite.config.js) | Added proxy for `/auth` and `/api` → `localhost:5000` |
+| [App.jsx](file:///c:/NU/career-sim-ai(final)/src/App.jsx) | Wrapped in AuthProvider, login gate, user info + logout in header |
+| [Interview.jsx](file:///c:/NU/career-sim-ai(final)/src/components/Interview.jsx) | `localStorage` → [saveChat()](file:///c:/NU/career-sim-ai%28final%29/src/services/api.js#32-42) / [saveScore()](file:///c:/NU/career-sim-ai%28final%29/src/services/api.js#43-53) API calls |
+| [Dashboard.jsx](file:///c:/NU/career-sim-ai(final)/src/components/Dashboard.jsx) | `localStorage` → [fetchInterviews()](file:///c:/NU/career-sim-ai%28final%29/src/services/api.js#26-31) / [clearAllData()](file:///c:/NU/career-sim-ai%28final%29/src/services/api.js#54-62) |
+| [History.jsx](file:///c:/NU/career-sim-ai(final)/src/components/History.jsx) | `localStorage` → [fetchInterviews()](file:///c:/NU/career-sim-ai%28final%29/src/services/api.js#26-31) |
+| [ExportData.jsx](file:///c:/NU/career-sim-ai(final)/src/components/ExportData.jsx) | `localStorage` → API calls, state-based rendering |
+| [index.css](file:///c:/NU/career-sim-ai(final)/src/index.css) | Added login page, auth spinner, user info, logout styles |
+
+## Build Verification
+
+✅ `npm run build` — passed (built in ~6s, 0 errors)
+✅ `npm install` (server) — 115 packages, 0 vulnerabilities
+
+## Setup Instructions (Required Before Running)
+
+### 1. Google Cloud Console
+1. Go to [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials)
+2. Create **OAuth 2.0 Client ID** (Web application)
+3. Set authorized redirect URI: `http://localhost:5000/auth/google/callback`
+4. Copy Client ID and Client Secret
+
+### 2. MongoDB
+- **Option A**: [MongoDB Atlas](https://www.mongodb.com/atlas) free tier → get connection string
+- **Option B**: Local MongoDB → use `mongodb://localhost:27017/careerprep`
+
+### 3. Fill in [server/.env](file:///c:/NU/career-sim-ai%28final%29/server/.env)
+```
+GOOGLE_CLIENT_ID=<your-client-id>
+GOOGLE_CLIENT_SECRET=<your-client-secret>
+MONGODB_URI=<your-mongodb-uri>
+SESSION_SECRET=<any-random-string>
+CLIENT_URL=http://localhost:5173
+```
+
+### 4. Run
+```bash
+# Terminal 1 - Backend
+cd server
+npm start
+
+# Terminal 2 - Frontend
+npm run dev
+```
+
+Open `http://localhost:5173` → you'll see the login page → sign in with Google → use the app!

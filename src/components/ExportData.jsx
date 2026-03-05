@@ -1,12 +1,29 @@
 // src/components/ExportData.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { fetchInterviews, clearAllData } from '../services/api';
 
 function ExportData() {
   const [exportStatus, setExportStatus] = useState('');
+  const [interviewScores, setInterviewScores] = useState([]);
+  const [interviewChats, setInterviewChats] = useState([]);
+
+  const loadData = async () => {
+    try {
+      const data = await fetchInterviews();
+      setInterviewScores(data.scores || []);
+      setInterviewChats(data.chats || []);
+    } catch (err) {
+      console.error('Error loading data:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+    window.addEventListener('historyCleared', loadData);
+    return () => window.removeEventListener('historyCleared', loadData);
+  }, []);
 
   const exportToCSV = () => {
-    const interviewScores = JSON.parse(localStorage.getItem('interviewScores') || '[]');
-    
     if (interviewScores.length === 0) {
       setExportStatus('⚠️ No interview scores to export.');
       setTimeout(() => setExportStatus(''), 3000);
@@ -45,18 +62,22 @@ function ExportData() {
     setTimeout(() => setExportStatus(''), 3000);
   };
 
-  const clearAllData = () => {
+  const handleClearAllData = async () => {
     if (window.confirm('Are you sure you want to clear all data? This cannot be undone!')) {
-      localStorage.removeItem('interviewScores');
-      localStorage.removeItem('interviewChats');
-      window.dispatchEvent(new CustomEvent('historyCleared'));
-      setExportStatus('✅ All data cleared!');
-      setTimeout(() => setExportStatus(''), 3000);
+      try {
+        await clearAllData();
+        setInterviewScores([]);
+        setInterviewChats([]);
+        window.dispatchEvent(new CustomEvent('historyCleared'));
+        setExportStatus('✅ All data cleared!');
+        setTimeout(() => setExportStatus(''), 3000);
+      } catch (err) {
+        console.error('Error clearing data:', err);
+        setExportStatus('❌ Failed to clear data.');
+        setTimeout(() => setExportStatus(''), 3000);
+      }
     }
   };
-
-  const interviewScores = JSON.parse(localStorage.getItem('interviewScores') || '[]');
-  const interviewChats = JSON.parse(localStorage.getItem('interviewChats') || '[]');
 
   return (
     <div className="export-data-container">
@@ -85,7 +106,7 @@ function ExportData() {
         </div>
 
         <div className="export-section danger-zone">
-          <button onClick={clearAllData} className="btn-danger">
+          <button onClick={handleClearAllData} className="btn-danger">
             🗑️ Clear All Data
           </button>
           <p className="warning-text">This will permanently delete all your interview history and scores.</p>
@@ -102,4 +123,3 @@ function ExportData() {
 }
 
 export default ExportData;
-
