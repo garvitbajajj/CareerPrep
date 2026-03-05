@@ -13,7 +13,7 @@ router.get(
 // @desc    Google OAuth callback
 router.get(
     '/google/callback',
-    passport.authenticate('google', { failureRedirect: '/auth/login-failed' }),
+    passport.authenticate('google', { failureRedirect: '/api/auth/login-failed' }),
     (req, res) => {
         // Successful authentication, redirect to frontend
         res.redirect(process.env.CLIENT_URL || 'http://localhost:5173');
