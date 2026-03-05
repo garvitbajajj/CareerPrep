@@ -1,6 +1,7 @@
 // src/components/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { fetchInterviews, clearAllData } from '../services/api';
 
 function Dashboard() {
   const [scores, setScores] = useState([]);
@@ -14,74 +15,79 @@ function Dashboard() {
   const [trends, setTrends] = useState({});
   const [suggestions, setSuggestions] = useState([]);
 
-  const loadData = () => {
-    const allScores = JSON.parse(localStorage.getItem('interviewScores')) || [];
-    setScores(allScores);
+  const loadData = async () => {
+    try {
+      const data = await fetchInterviews();
+      const allScores = data.scores || [];
+      setScores(allScores);
 
-    if (allScores.length > 0) {
-      const totalClarity = allScores.reduce((sum, s) => sum + (s.clarity || 0), 0);
-      const totalCoherence = allScores.reduce((sum, s) => sum + (s.coherence || 0), 0);
-      const totalFillerWords = allScores.reduce((sum, s) => sum + (s.fillerWords || 0), 0);
-      const totalConfidence = allScores.reduce((sum, s) => sum + (s.confidence || 0), 0);
-      const totalNervousness = allScores.reduce((sum, s) => sum + (s.nervousness || 0), 0);
+      if (allScores.length > 0) {
+        const totalClarity = allScores.reduce((sum, s) => sum + (s.clarity || 0), 0);
+        const totalCoherence = allScores.reduce((sum, s) => sum + (s.coherence || 0), 0);
+        const totalFillerWords = allScores.reduce((sum, s) => sum + (s.fillerWords || 0), 0);
+        const totalConfidence = allScores.reduce((sum, s) => sum + (s.confidence || 0), 0);
+        const totalNervousness = allScores.reduce((sum, s) => sum + (s.nervousness || 0), 0);
 
-      const avgClarity = parseFloat((totalClarity / allScores.length).toFixed(1));
-      const avgCoherence = parseFloat((totalCoherence / allScores.length).toFixed(1));
-      const avgFillerWords = parseFloat((totalFillerWords / allScores.length).toFixed(1));
-      const avgConfidence = parseFloat((totalConfidence / allScores.length).toFixed(1));
-      const avgNervousness = parseFloat((totalNervousness / allScores.length).toFixed(1));
+        const avgClarity = parseFloat((totalClarity / allScores.length).toFixed(1));
+        const avgCoherence = parseFloat((totalCoherence / allScores.length).toFixed(1));
+        const avgFillerWords = parseFloat((totalFillerWords / allScores.length).toFixed(1));
+        const avgConfidence = parseFloat((totalConfidence / allScores.length).toFixed(1));
+        const avgNervousness = parseFloat((totalNervousness / allScores.length).toFixed(1));
 
-      setAverages({
-        clarity: avgClarity,
-        coherence: avgCoherence,
-        fillerWords: avgFillerWords,
-        confidence: avgConfidence,
-        nervousness: avgNervousness,
-      });
+        setAverages({
+          clarity: avgClarity,
+          coherence: avgCoherence,
+          fillerWords: avgFillerWords,
+          confidence: avgConfidence,
+          nervousness: avgNervousness,
+        });
 
-      // Calculate trends (comparing recent vs older scores)
-      let currentTrends = {};
-      if (allScores.length >= 3) {
-        const recentCount = Math.min(3, Math.floor(allScores.length / 2));
-        const recentScores = allScores.slice(-recentCount);
-        const olderScores = allScores.slice(0, allScores.length - recentCount);
+        // Calculate trends (comparing recent vs older scores)
+        let currentTrends = {};
+        if (allScores.length >= 3) {
+          const recentCount = Math.min(3, Math.floor(allScores.length / 2));
+          const recentScores = allScores.slice(-recentCount);
+          const olderScores = allScores.slice(0, allScores.length - recentCount);
 
-        const recentAvg = {
-          clarity: recentScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / recentCount,
-          coherence: recentScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / recentCount,
-          confidence: recentScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / recentCount,
-        };
+          const recentAvg = {
+            clarity: recentScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / recentCount,
+            coherence: recentScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / recentCount,
+            confidence: recentScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / recentCount,
+          };
 
-        const olderAvg = {
-          clarity: olderScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / olderScores.length,
-          coherence: olderScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / olderScores.length,
-          confidence: olderScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / olderScores.length,
-        };
+          const olderAvg = {
+            clarity: olderScores.reduce((sum, s) => sum + (s.clarity || 0), 0) / olderScores.length,
+            coherence: olderScores.reduce((sum, s) => sum + (s.coherence || 0), 0) / olderScores.length,
+            confidence: olderScores.reduce((sum, s) => sum + (s.confidence || 0), 0) / olderScores.length,
+          };
 
-        currentTrends = {
-          clarity: recentAvg.clarity - olderAvg.clarity,
-          coherence: recentAvg.coherence - olderAvg.coherence,
-          confidence: recentAvg.confidence - olderAvg.confidence,
-        };
+          currentTrends = {
+            clarity: recentAvg.clarity - olderAvg.clarity,
+            coherence: recentAvg.coherence - olderAvg.coherence,
+            confidence: recentAvg.confidence - olderAvg.confidence,
+          };
 
-        setTrends(currentTrends);
+          setTrends(currentTrends);
+        }
+
+        // Generate intelligent suggestions (will be called after trends are set)
+
+        generateSuggestions({
+          clarity: avgClarity,
+          coherence: avgCoherence,
+          fillerWords: avgFillerWords,
+          confidence: avgConfidence,
+          nervousness: avgNervousness,
+          trends: currentTrends,
+          totalSessions: allScores.length,
+        });
+      } else {
+        setAverages({ clarity: 0, coherence: 0, fillerWords: 0, confidence: 0, nervousness: 0 });
+        setTrends({});
+        setSuggestions([]);
       }
-
-      // Generate intelligent suggestions (will be called after trends are set)
-
-      generateSuggestions({
-        clarity: avgClarity,
-        coherence: avgCoherence,
-        fillerWords: avgFillerWords,
-        confidence: avgConfidence,
-        nervousness: avgNervousness,
-        trends: currentTrends,
-        totalSessions: allScores.length,
-      });
-    } else {
-      setAverages({ clarity: 0, coherence: 0, fillerWords: 0, confidence: 0, nervousness: 0 });
-      setTrends({});
-      setSuggestions([]);
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
     }
   };
 
@@ -235,10 +241,13 @@ function Dashboard() {
     };
   }, []);
 
-  const handleClearHistory = () => {
-    localStorage.removeItem('interviewScores');
-    localStorage.removeItem('interviewChats');
-    window.dispatchEvent(new CustomEvent('historyCleared'));
+  const handleClearHistory = async () => {
+    try {
+      await clearAllData();
+      window.dispatchEvent(new CustomEvent('historyCleared'));
+    } catch (err) {
+      console.error('Error clearing history:', err);
+    }
   };
 
   return (

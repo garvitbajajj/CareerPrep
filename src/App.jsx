@@ -1,5 +1,8 @@
 // src/App.jsx
 import React, { useState, useEffect } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { logout } from './services/api';
+import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 import Interview from './components/Interview';
 import Writing from './components/Writing';
@@ -10,19 +13,17 @@ import SkillsQuiz from './components/SkillsQuiz';
 import DataManagementPage from './components/DataManagementPage';
 import Chatbot from './components/Chatbot';
 
-function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
   const [showHistory, setShowHistory] = useState(false);
   const [showDataManagement, setShowDataManagement] = useState(false);
   const [theme, setTheme] = useState(() => {
-    // Get theme from localStorage or default to 'dark'
     const savedTheme = localStorage.getItem('theme') || 'dark';
-    // Apply theme immediately on mount
     document.documentElement.setAttribute('data-theme', savedTheme);
     return savedTheme;
   });
 
   useEffect(() => {
-    // Apply theme to document root whenever it changes
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
@@ -30,6 +31,21 @@ function App() {
   const toggleTheme = () => {
     setTheme(prevTheme => prevTheme === 'dark' ? 'light' : 'dark');
   };
+
+  // Show a loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="auth-loading">
+        <div className="auth-loading-spinner"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!user) {
+    return <LoginPage />;
+  }
 
   return (
     <>
@@ -39,6 +55,12 @@ function App() {
           <p className="header-tagline">Your AI-Powered Career Preparation Platform</p>
         </div>
         <div className="header-buttons">
+          <div className="user-info">
+            {user.avatar && (
+              <img src={user.avatar} alt={user.displayName} className="user-avatar" referrerPolicy="no-referrer" />
+            )}
+            <span className="user-name">{user.displayName}</span>
+          </div>
           <button onClick={toggleTheme} className="btn-theme-toggle" title="Toggle theme">
             {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
           </button>
@@ -47,6 +69,9 @@ function App() {
           </button>
           <button onClick={() => setShowHistory(!showHistory)} className="btn-history">
             {showHistory ? '← Back to App' : '📊 Show Interview History'}
+          </button>
+          <button onClick={logout} className="btn-logout">
+            🚪 Logout
           </button>
         </div>
       </header>
@@ -69,10 +94,18 @@ function App() {
           <Dashboard />
         </main>
       )}
-      
+
       {/* Chatbot - Always available */}
       <Chatbot />
     </>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

@@ -1,13 +1,18 @@
 // src/components/History.jsx
 import React, { useState, useEffect } from 'react';
+import { fetchInterviews } from '../services/api';
 
 function History() {
   const [chats, setChats] = useState([]);
 
-  // Function to load data
-  const loadHistory = () => {
-    const allChats = JSON.parse(localStorage.getItem('interviewChats')) || [];
-    setChats(allChats.reverse()); // Show most recent first
+  // Function to load data from backend
+  const loadHistory = async () => {
+    try {
+      const data = await fetchInterviews();
+      setChats((data.chats || []).reverse()); // Show most recent first
+    } catch (err) {
+      console.error('Error loading history:', err);
+    }
   };
 
   useEffect(() => {
