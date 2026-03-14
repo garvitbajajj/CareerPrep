@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
 const { app, connectDB } = require('../server/app.js');
-
+// ensure
 // Ensure MongoDB is connected before handling requests
 export default async function handler(req, res) {
     try {
@@ -18,3 +18,4 @@ export default async function handler(req, res) {
         res.status(500).json({ error: 'Internal server error' });
     }
 }
+x = 6
