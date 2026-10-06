@@ -58,5 +58,92 @@ Before you begin, ensure you have the following installed:
 ```bash
 git clone https://github.com/garvitbajajj/CareerPrep.git
 cd CareerPrep
+```
 
-2. Install Dependencies
+### 2. Install Dependencies
+
+The frontend and the API server have separate dependency sets:
+
+```bash
+npm install
+cd server && npm install && cd ..
+```
+
+### 3. Configure Environment Variables
+
+Create `.env` in the project root, for the Vite frontend:
+
+```env
+VITE_BACKEND_URL=http://localhost:5000
+VITE_GROQ_API_KEY=your-groq-key     # see the security note below
+```
+
+And `server/.env`, for the API:
+
+```env
+MONGODB_URI=mongodb://localhost:27017/careerprep
+SESSION_SECRET=a-long-random-string
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+CALLBACK_URL=http://localhost:5000/api/auth/google/callback
+CLIENT_URL=http://localhost:5173
+PORT=5000
+```
+
+### 4. Run It
+
+```bash
+npm run dev                  # frontend on http://localhost:5173
+cd server && npm start       # API on http://localhost:5000
+```
+
+Sign-in is Google OAuth only, so the Google credentials are required even
+locally. Add `http://localhost:5000/api/auth/google/callback` as an
+authorised redirect URI in the Google Cloud console.
+
+---
+
+## 🗂 Project Structure
+
+```
+src/
+  components/      Interview, Resume, Chatbot, SkillsQuiz, QuestionBank,
+                   Writing, Dashboard, ExportData, ErrorBoundary
+  context/         AuthContext — session state shared across the app
+  services/api.js  fetch wrapper; sends credentials with every call
+server/
+  app.js           Express app: session, Passport, Google OAuth, routes
+  index.js         local entry point
+  models/User.js   user, saved interviews, chats and scores
+  routes/          auth.js (OAuth, session) and api.js (interview data)
+api/index.js       Vercel serverless handler wrapping the Express app
+```
+
+Sessions are cookie-based and stored in MongoDB through `connect-mongo`, so
+the API is stateless across serverless invocations.
+
+---
+
+## ⚠️ Security note on the Groq key
+
+`VITE_GROQ_API_KEY` is read in the browser, and every Groq client is created
+with `dangerouslyAllowBrowser: true`. **Vite inlines `VITE_` variables into
+the JavaScript bundle at build time**, so a deployed build publishes the key
+to anyone who opens developer tools.
+
+Treat any key used this way as public: use a throwaway key with a spend limit,
+and never point this at a key that bills you.
+
+The fix is to move the Groq and Generative AI calls behind the Express server
+— it already has sessions and a `requireAuth` guard — and have the components
+call the API instead. Rotate the key when you do, since the old one has been
+shipped.
+
+---
+
+## 🚢 Deployment
+
+Deployed on Vercel. `vercel.json` serves the Vite build and routes `/api/*` to
+`api/index.js`, which wraps the same Express app used locally. Set the server
+environment variables in the Vercel project, and point `CLIENT_URL` and
+`CALLBACK_URL` at the deployed domain rather than localhost.
