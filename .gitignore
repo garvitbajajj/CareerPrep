@@ -37,3 +37,5 @@ lerna-debug.log*
 
 # Vite
 *.local
+# Console screenshots: this one held an OAuth client secret
+Screenshot *.png
